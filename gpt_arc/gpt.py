@@ -38,6 +38,7 @@ class BeBertDecoder(torch.nn.Module):
         self.n_blocks = n_blocks
         self.n_heads = n_heads
         self.vocab_size = vocab_size
+        self.cross_entropy = torch.nn.CrossEntropyLoss()
 
         self.feed_forward_hidden = self.model_dim * 4
 
@@ -51,23 +52,30 @@ class BeBertDecoder(torch.nn.Module):
         self.softmax = torch.nn.Softmax(dim=-1)
 
     # dont need segment_ids anymore
-    def forward(self, input_ids):
+    def forward(self, input_ids, mode):
         x = self.embedding(input_ids)
 
         for encoder in self.encoder_blocks:
             x = encoder.forward(x)
 
         # add the last layer for probability forecasting
-        x = self.softmax(self.linear_output(x))
+        logits = self.linear_output(x)
+        last_tokens = self.softmax(logits)
 
-        return x
+        if mode == 'train':
+            logits = logits.reshape(-1, self.vocab_size)
+            targets = input_ids.reshape(-1)
+            loss = self.cross_entropy(logits, targets)
+            return last_tokens, loss
+
+        return last_tokens
 
     def generate(self, input_ids, max_length=10):
         # we make forward for max_length times
         # each time we add new token
         # TODO: should check the context window len and eos-token
         for _ in range(max_length):
-            output_probs = self.forward(input_ids)
+            output_probs = self.forward(input_ids, mode='generate')
             # next token for the whole input sequence
             new_token_ids = output_probs[:, -1, :].argmax(dim=-1)
             input_ids = torch.cat((input_ids, new_token_ids.unsqueeze(1)), dim=-1)
