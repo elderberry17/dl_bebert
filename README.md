@@ -10,11 +10,15 @@ The repository also include data preparation and training steps for NSP and MLM 
 
 The tokenizer is stolen from here (https://huggingface.co/cointegrated/rubert-tiny). However, it is a great idea to add code from training your own tokenizer from scratch!
 
-You are free to change data/configs/traning process to make the repository a better place for students.
+You are free to change data/configs/training process to make the repository a better place for students.
 
 # Test
 
 The test stage is using the MTEB (https://github.com/embeddings-benchmark/mteb) corpus of Benchmarks. There is a test config file that by default employs only a list of benchmarks for Russian language.
+
+# Requirements
+
+There are 2 requirements files in the project. The "requirements.txt" is a necessary one to perform the training pipelines. The second one is additional in case you desire to evaluate the model on the MTEB. You are also supposed to push your model to Hugging-Face hub in advance.
 
 # HF model
 
