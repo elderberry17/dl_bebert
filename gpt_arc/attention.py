@@ -14,9 +14,7 @@ class BeAttentionGPT(torch.nn.Module):
         # scale factor
         self.scale = torch.sqrt(torch.tensor(hidden_dim, dtype=torch.float32))
 
-    def forward(self, x):
-        # TODO: mask for padding?
-
+    def forward(self, x, attention_mask=None):
         # получаем K, Q, V
         Q = self.query(x)
         K = self.key(x)
@@ -28,6 +26,14 @@ class BeAttentionGPT(torch.nn.Module):
         # the difference in attention calculation!!
         # i cant see further tokens
         scores = scores.masked_fill(torch.tril(scores) == 0, float('-inf'))
+
+        # # work with padding. pad_token = 0 (hard coded)
+        if attention_mask is not None:
+            attention_mask_pad = attention_mask[:, :, None] & attention_mask[:, None, :]
+            scores = scores.masked_fill(attention_mask_pad == 0, float('-inf')) 
+
+        # to avoid nans
+        scores = scores.masked_fill(scores == float('-inf'), -1e9)
 
         # считаем sm
         attn_weights = torch.nn.functional.softmax(scores, dim=-1)
@@ -48,8 +54,8 @@ class BeMultiHeadAttentionGPT(torch.nn.Module):
         self.heads = torch.nn.ModuleList(BeAttentionGPT(self.head_dim) for _ in range(self.n_heads))
         self.heads_proj = torch.nn.Linear(self.hidden_dim, self.hidden_dim)
 
-    def forward(self, X):
-        attention_inputs = torch.cat([self.heads[ind](X[:, :, ind*self.head_dim: (ind+1)*self.head_dim]) for ind in range(self.n_heads)], dim=-1)
+    def forward(self, X, attention_mask):
+        attention_inputs = torch.cat([self.heads[ind](X[:, :, ind*self.head_dim: (ind+1)*self.head_dim], attention_mask) for ind in range(self.n_heads)], dim=-1)
         output = self.heads_proj(attention_inputs)
 
         return output

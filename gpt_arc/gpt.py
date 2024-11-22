@@ -16,10 +16,10 @@ class GPTBlock(torch.nn.Module):
         self.feed_forward = BeFF(model_dim, middle_dim=ff_hidden)
         self.dropout = torch.nn.Dropout(dropout)
 
-    def forward(self, embeddings):
+    def forward(self, embeddings, attention_mask=None):
         # embeddings: (batch_size, max_len, d_model)
         # result: (batch_size, max_len, d_model)
-        interacted = self.dropout(self.self_multihead(embeddings))
+        interacted = self.dropout(self.self_multihead(embeddings, attention_mask))
         # residual layer
         interacted = self.layernorm(interacted + embeddings)
         # bottleneck
@@ -52,11 +52,11 @@ class BeBertDecoder(torch.nn.Module):
         self.softmax = torch.nn.Softmax(dim=-1)
 
     # dont need segment_ids anymore
-    def forward(self, input_ids, mode):
+    def forward(self, input_ids, attention_mask=None, mode="generate"):
         x = self.embedding(input_ids)
 
         for encoder in self.encoder_blocks:
-            x = encoder.forward(x)
+            x = encoder.forward(x, attention_mask)
 
         # add the last layer for probability forecasting
         logits = self.linear_output(x)
