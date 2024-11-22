@@ -46,16 +46,16 @@ class BeBertEmbedding(torch.nn.Module):
     комбинируем семантические и простые позиционные эмбеддинги
     """
 
-    def __init__(self, vocab_size, embed_size, seq_len=128, dropout=0.1):
+    def __init__(self, vocab_size, embed_size, dropout=0.1):
         super().__init__()
         self.embed_size = embed_size
         self.vocab_size = vocab_size
 
         self.token = SemanticEmbedding(vocab_size, embed_size, padding_idx=0)
         self.segment = SemanticEmbedding(3, embed_size, padding_idx=0)
-        self.position = PositionalEmbedding(d_model=embed_size, max_len=seq_len)
+        self.position = PositionalEmbedding(d_model=embed_size, max_len=embed_size)
         self.dropout = torch.nn.Dropout(p=dropout)
 
     def forward(self, input_ids):
-        x = self.token(input_ids).to(input_ids.device) + self.position(input_ids)
+        x = self.token(input_ids).to(input_ids.device) + self.position(input_ids).to(input_ids.device)
         return self.dropout(x)

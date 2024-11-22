@@ -13,12 +13,12 @@ def save_checkpoint(model, checkpoints_dir, epoch):
     print(f"checkpoint saved at {checkpoint_path}")
 
 
-def train_val_loop(model, train_loader, val_loader, optimizer, num_epochs, checkpoints_dir="checkpoints_clm"):
+def train_val_loop(model, train_loader, val_loader, optimizer, num_epochs, checkpoints_dir="checkpoints_clm", device='cuda:0'):
     best_val_loss = float('inf')
     for epoch in range(num_epochs):
         print(f"epoch {epoch}:", end=' ')
-        train_loss = train_epoch(model, train_loader, optimizer)
-        val_loss = val_epoch(model, val_loader)
+        train_loss = train_epoch(model, train_loader, optimizer, device)
+        val_loss = val_epoch(model, val_loader, device)
         print(f"avg train loss = {train_loss} | avg val loss = {val_loss}")
     
         if val_loss < best_val_loss:
@@ -26,13 +26,13 @@ def train_val_loop(model, train_loader, val_loader, optimizer, num_epochs, check
             save_checkpoint(model, checkpoints_dir, epoch)
             best_val_loss = val_loss
 
-def train_epoch(model, loader, optimizer):
+def train_epoch(model, loader, optimizer, device):
     total_loss = 0
 
     model.train()
     for batch in tqdm(loader, total=len(loader)):
         optimizer.zero_grad()
-        _, loss = model(batch['input_ids'], batch['attention_mask'], mode="train")
+        _, loss = model(batch['input_ids'].to(device), batch['attention_mask'].to(device), mode="train")
         loss.backward()
         optimizer.step()
 
@@ -43,14 +43,15 @@ def train_epoch(model, loader, optimizer):
     
 
 
-def val_epoch(model, loader):
+def val_epoch(model, loader, device):
     total_loss = 0
 
     model.eval()
     for batch in tqdm(loader, total=len(loader)):
         with torch.no_grad():
-            _, loss = model(batch['input_ids'], batch['attention_mask'], mode="train")
+            _, loss = model(batch['input_ids'].to(device), batch['attention_mask'].to(device), mode="train")
             total_loss += loss.item()
 
     avg_loss = total_loss / len(loader)
     return avg_loss
+    
